@@ -19,6 +19,8 @@ able to guess.
 It is the fork, that realized silence frames replacing by special pattern contains noise or silence
 (you can choose with option), but this option supports only AMR and AMR-WB codecs.
 
+Original github: https://github.com/Spinlogic/AMR-WB_extractor
+
 Limitations:
    - Supports only single channel for all codecs suppoted. I.e. multichannel is not supported.
    - Supports only 1 codec frame per packet.
