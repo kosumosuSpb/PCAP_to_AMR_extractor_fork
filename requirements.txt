@@ -1,0 +1,2 @@
+bitarray~=2.5.1
+scapy~=2.4.5

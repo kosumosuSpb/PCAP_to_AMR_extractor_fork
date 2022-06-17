@@ -4,3 +4,7 @@
 *.wav
 *.amr-wb
 /rtpamrw_env
+/.vscode/
+/venv/
+/temp/
+/.idea
