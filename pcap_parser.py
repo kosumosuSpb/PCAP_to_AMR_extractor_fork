@@ -423,16 +423,15 @@ if __name__ == '__main__':
                 nxt = packets_list[idx + 1] if idx < packets_len - 1 else 0  # define the next packet
 
                 if prev and len(prev) > 81:  # if this packet is the first silence frame
-                    t_start = packet.time  # fix the packet arrival time
+                    t_start = packet.time  # fix the packet time arrival
                     # logger.debug(f'tstart == {t_start}')
 
                 if (nxt and len(nxt) > 81) or idx == len(packets_list)-1:  # if it's the last silence frame
-                    t_stop = nxt.time if nxt else 0  # fix the pkt arrival time
+                    t_stop = nxt.time if nxt else 0  # fix the packet time arrival
                     t_start = t_start if t_start else 0  # if its the first silence frame of the file
-                    logger.debug(f'tstart == {t_start}')
-                    logger.debug(f'tstop == {t_stop}')
+                    # logger.debug(f'tstart == {t_start}')
+                    # logger.debug(f'tstop == {t_stop}')
                     dur = t_stop - t_start if t_stop >= t_start else 0  # counting duration of the silence
-                    logger.debug(f'dur == {dur}')
                     ttl_dur += dur  # to find total duration of all silence in the file
                     logger.debug(f'Duration of silence is: {dur} seconds')
                     tdelta = round(1000 * dur)//20  # find time delta in seconds, convert to ms and take in parts from 20 ms intervals
@@ -442,8 +441,8 @@ if __name__ == '__main__':
                     elif codec == 'amr':
                         replace_sample = sample_noise_amrnb if args.sample == 'noise' else sample_silence_amrnb
 
-                    noise = replace_sample * tdelta
-                    ofile.write(noise)
+                    silence = replace_sample * tdelta
+                    ofile.write(silence)
                 continue
 
             ###########################
