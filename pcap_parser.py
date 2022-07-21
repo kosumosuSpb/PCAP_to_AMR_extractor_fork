@@ -28,9 +28,9 @@ Limitations:
    - Iu Framing is not supported for the EVS codec
 """
 
-__version__ = '0.3.0'
+__version__ = '0.3.5'
 __author__ = 'Juan Noguera'
-__fork_by__ = 'KOSumosu'
+__fork_by__ = 'kosumosuSpb'
 
 # sys.path.insert(0, "E:\Proyectos\RTP_AMRWB\rtpamrw_env\Lib\site-packages")
 import argparse
@@ -106,7 +106,7 @@ def storePayloadIetf(outfile, codec, payload):
         if codec == 'amr':
             # Total number of bits for modes 0 to 8 (Tables 2 and A.1b in TS26.101)
             codec_ft = [95, 103, 118, 134, 148, 159, 204, 244, 39]
-        elif codec == 'amr-wb':  # amr-wb
+        else:  # codec == 'amr-wb':  # amr-wb
             # Total number of bits for modes 0 to 9 (Table 2 in TS26.201)
             codec_ft = [132, 177, 253, 285, 317, 365, 397, 461, 477, 40]
 
@@ -124,13 +124,19 @@ def storePayloadIetf(outfile, codec, payload):
         buf.frombytes(payload[1:])
         # remove the first two bits (corresponding to 4th FT bit and Q)
         buf = buf[2:]
-        # print('DEBUG -> FT = {}, Q = {} , TOC = {}'. format(ft >> 7, q >> 6, toc))
+
+        logger.debug('FT = {}, Q = {} , TOC = {}'.format(ft >> 7, q >> 6, toc))
+        # logger.debug(f'before bit offset ft == {ft}')
+
         ft = ft >> 7
+
+        # logger.debug(f'len(buf) == {len(buf)}, ft == {ft}')
+
         if len(buf) >= codec_ft[ft]:    # remove padding
-            buf = buf[:codec_ft[ft]] 
-        bitline += buf # toc + codec frame
+            buf = buf[:codec_ft[ft]]
+        bitline += buf  # toc + codec frame
         # bitline.append(False * (len(bitline) % 8)) # add padding
-        bitline.tofile(outfile) # 0 padding is done by bitarray to achieve byte aligment
+        bitline.tofile(outfile)  # 0 padding is done by bitarray to achieve byte aligment
         # print('DEBUG -> RTP payload: {}'.format(amrpl))
         # print('DEBUG -> Line: {}'.format(bitline.tobytes()))
     else:  # evs
@@ -438,46 +444,6 @@ if __name__ == '__main__':
         for packet in packets:
             num_frames += 1
 
-            ##########################
-            # SILENCE FRAME REPLACER #
-            ##########################
-
-            if len(packet) == 81 and codec in ('amr-wb', 'amr'):  # pretending that it is silence :)
-                # find duration of silence
-                idx = packets_list.index(packet)  # find index of the packet
-                prev = packets_list[idx-1] if idx > 0 else 0  # define the previous packet
-                nxt = packets_list[idx + 1] if idx < packets_len - 1 else 0  # define the next packet
-
-                if idx == 0:  # if silence frame is the first frame of the pkt
-                    t_start = packet.time  # keep the packet time arrival
-                    logger.debug(f'tstart == {t_start}')
-
-                elif prev and len(prev) > 81:  # if this packet is the first silence frame, but not first at all
-                    t_start = packet.time  # keep the packet time arrival
-                    logger.debug(f'tstart == {t_start}')
-
-                if (nxt and len(nxt) > 81) or idx == len(packets_list)-1:  # if it's the last silence frame (or not)
-                    t_stop = nxt.time if nxt else 0  # fix the packet time arrival
-                    logger.debug(f'tstart == {t_start}')
-                    logger.debug(f'tstop == {t_stop}')
-                    dur = t_stop - t_start if t_stop >= t_start else 0  # counting duration of the silence
-                    ttl_dur += dur  # to find total duration of all silence in the file
-                    logger.debug(f'Duration of silence is: {dur} seconds')
-                    tdelta = round(1000 * dur)//20  # find time delta in seconds, convert to ms and take in parts from 20 ms intervals
-
-                    if codec == 'amr-wb':
-                        replace_sample = sample_noise_amrwb if args.sample == 'noise' else sample_silence_amrwb
-                    elif codec == 'amr':
-                        replace_sample = sample_noise_amrnb if args.sample == 'noise' else sample_silence_amrnb
-
-                    silence = replace_sample * tdelta
-                    ofile.write(silence)
-                continue
-
-            ###########################
-            # /SILENCE FRAME REPLACER #
-            ###########################
-
             isvalid = False
 
             rtp = getRtpAsPacket(packet)
@@ -499,6 +465,48 @@ if __name__ == '__main__':
                     storePayloadIetf(ofile, codec, rtp.load)
                 else:
                     storePayloadIu(ofile, codec, rtp.load)
+
+            ##########################
+            # SILENCE FRAME REPLACER #
+            ##########################
+
+            if len(packet) == 81 and codec in ('amr-wb', 'amr'):  # pretending that it is silence :)
+                # find duration of silence
+                idx = packets_list.index(packet)  # find index of the packet
+                prev = packets_list[idx - 1] if idx > 0 else 0  # define the previous packet
+                nxt = packets_list[idx + 1] if idx < packets_len - 1 else 0  # define the next packet
+
+                if idx == 0:  # if silence frame is the first frame of the pkt
+                    t_start = packet.time  # keep the packet time arrival
+                    logger.debug(f'tstart == {t_start}')
+
+                elif prev and len(prev) > 81:  # if this packet is the first silence frame, but not first at all
+                    t_start = packet.time  # keep the packet time arrival
+                    logger.debug(f'tstart == {t_start}')
+
+                if (nxt and len(nxt) > 81) or idx == len(
+                        packets_list) - 1:  # if it's the last silence frame (or not)
+                    t_stop = nxt.time if nxt else 0  # fix the packet time arrival
+                    logger.debug(f'tstart == {t_start}')
+                    logger.debug(f'tstop == {t_stop}')
+                    dur = t_stop - t_start if t_stop >= t_start else 0  # counting duration of the silence
+                    ttl_dur += dur  # to find total duration of all silence in the file
+                    logger.debug(f'Duration of silence is: {dur} seconds')
+                    tdelta = round(
+                        1000 * dur) // 20  # find time delta in seconds, convert to ms and take in parts from 20 ms intervals
+
+                    if codec == 'amr-wb':
+                        replace_sample = sample_noise_amrwb if args.sample == 'noise' else sample_silence_amrwb
+                    elif codec == 'amr':
+                        replace_sample = sample_noise_amrnb if args.sample == 'noise' else sample_silence_amrnb
+
+                    silence = replace_sample * tdelta
+                    ofile.write(silence)
+                continue
+
+            ###########################
+            # /SILENCE FRAME REPLACER #
+            ###########################
 
     if framing == 'ietf':
         print('Codec: {}, Total: {} , Valid: {} , Bad: {}'.format(codec, num_frames, num_valid_frames, num_bad_frames))
