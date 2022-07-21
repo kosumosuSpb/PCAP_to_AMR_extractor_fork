@@ -1,12 +1,17 @@
 # Codec payload Extractor fork
 Extracts AMR, AMR-WB or EVS frames from RTP inside PCAP files and builds a *.3ga* file (for AMR and AMR-WB) or a *.evs-mime* (for EVS). 
 <br><br>
-In this fork it replace silence frames with noise or silence (you can change) with the same duration as it was in original.
+This fork replaces silence frames with noise or silence (you can change) with the same duration as it was in original (or something about this).
+Fork author is [KOSumosu](https://github.com/kosumosuSpb)
 <br><br>
-Original github: https://github.com/Spinlogic/AMR-WB_extractor
+Original github: [AMR-WB_extractor by Juan Noguera](https://github.com/Spinlogic/AMR-WB_extractor)
 
 ## Dependencies
 This script requires [python3](https://www.python.org/) and its modules [scapy](https://github.com/secdev/scapy) and [bitarray](https://pypi.org/project/bitarray/).
+
+Also you can do this:
+
+> pip install -r requirements.txt
 
 ## Usage
 >python pcap_parser.py -i <_rtpfilteredpcap_> [-o <_outputamrwbencodedaudio_>] [-c codec] [-f framing] [-s sample]
