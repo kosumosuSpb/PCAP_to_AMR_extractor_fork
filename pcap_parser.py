@@ -40,9 +40,27 @@ from scapy.all import *
 import textwrap
 
 
+# logger settings
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('AMRSilentReplacer')
 logger.setLevel(logging.INFO)
+
+LOGLEVEL = {
+    'debug': logging.DEBUG,
+    'info': logging.INFO,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'critical': logging.CRITICAL,
+}
+
+_lvl_to_name = {
+    50: 'CRITICAL',
+    40: 'ERROR',
+    30: 'WARNING',
+    20: 'INFO',
+    10: 'DEBUG',
+    0: 'NOTSET'
+}
 
 supported_codecs = ['guess', 'amr', 'amr-wb', 'evs']
 
@@ -355,10 +373,17 @@ if __name__ == '__main__':
     parser.add_argument('-s', action="store", dest="sample", default="noise",
                         help='Type of the sample to use for filling the silence frames: noise or silence.'
                              'Default is noise')
+    parser.add_argument('-L', '--loglevel', default="info", help='Log level verbosity. Default is "info"')
 
     args = parser.parse_args()
 
-    logging.basicConfig(filename='pcap_parser.log', filemode='w', level=logging.DEBUG)
+    # logging.basicConfig(filename='pcap_parser.log', filemode='w', level=logging.DEBUG)
+
+    # установка уровня лога в консоли
+    loglevel = args.loglevel.lower()
+    loglevel = LOGLEVEL.get(loglevel, 'info')
+    logger.setLevel(loglevel)
+    logger.info(f'Loglevel is set to {_lvl_to_name.get(logger.level, logger.level)}')
 
     if not args.infile:
         usage()
@@ -423,15 +448,18 @@ if __name__ == '__main__':
                 prev = packets_list[idx-1] if idx > 0 else 0  # define the previous packet
                 nxt = packets_list[idx + 1] if idx < packets_len - 1 else 0  # define the next packet
 
-                if prev and len(prev) > 81:  # if this packet is the first silence frame
-                    t_start = packet.time  # fix the packet time arrival
-                    # logger.debug(f'tstart == {t_start}')
+                if idx == 0:  # if silence frame is the first frame of the pkt
+                    t_start = packet.time  # keep the packet time arrival
+                    logger.debug(f'tstart == {t_start}')
 
-                if (nxt and len(nxt) > 81) or idx == len(packets_list)-1:  # if it's the last silence frame
+                elif prev and len(prev) > 81:  # if this packet is the first silence frame, but not first at all
+                    t_start = packet.time  # keep the packet time arrival
+                    logger.debug(f'tstart == {t_start}')
+
+                if (nxt and len(nxt) > 81) or idx == len(packets_list)-1:  # if it's the last silence frame (or not)
                     t_stop = nxt.time if nxt else 0  # fix the packet time arrival
-                    t_start = t_start if t_start else 0  # if its the first silence frame of the file
-                    # logger.debug(f'tstart == {t_start}')
-                    # logger.debug(f'tstop == {t_stop}')
+                    logger.debug(f'tstart == {t_start}')
+                    logger.debug(f'tstop == {t_stop}')
                     dur = t_stop - t_start if t_stop >= t_start else 0  # counting duration of the silence
                     ttl_dur += dur  # to find total duration of all silence in the file
                     logger.debug(f'Duration of silence is: {dur} seconds')
