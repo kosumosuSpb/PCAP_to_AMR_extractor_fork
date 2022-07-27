@@ -130,6 +130,11 @@ def storePayloadIetf(outfile, codec, payload):
 
         ft = ft >> 7
 
+        # FORK:
+        # crutch to avoid crushes, but its not right. I just dont know how converter works =_=
+        if (codec == 'amr-wb' and ft > 9) or (codec == 'amr' and ft > 8):
+            return
+
         # logger.debug(f'len(buf) == {len(buf)}, ft == {ft}')
 
         if len(buf) >= codec_ft[ft]:    # remove padding
@@ -226,7 +231,7 @@ def storePayloadIu(outfile, codec, amrpl):
         if fn != frame_number:
             fn = frame_number
             isvalid = True
-    if isvalid == True:
+    if isvalid:
         q = 1 if fqc == 0 else 0
         if q == 0:
             num_bad_frames += 1
@@ -284,7 +289,7 @@ def guessCodec(packets, framing):
         if ICMP in packet:
             continue
         rtp = getRtpAsPacket(packet)
-        if rtp == None:
+        if not rtp:
             continue
         if syncsrcid == -1:
             syncsrcid = rtp.sourcesync
@@ -447,7 +452,7 @@ if __name__ == '__main__':
             isvalid = False
 
             rtp = getRtpAsPacket(packet)
-            if rtp == None:
+            if not rtp:
                 continue
             # rtp = RTP(packet[UDP].load)
             if seq == -1:  # first RTP packet
@@ -459,7 +464,7 @@ if __name__ == '__main__':
                 isvalid = True
             elif seq != rtp.sequence and syncsrcid == rtp.sourcesync and ptype == rtp.payload_type:
                 isvalid = True
-            if isvalid == True:
+            if isvalid:
                 num_valid_frames += 1
                 if framing == 'ietf':
                     storePayloadIetf(ofile, codec, rtp.load)
